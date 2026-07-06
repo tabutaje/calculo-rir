@@ -2,7 +2,7 @@
   "name": "Rutina Torso / Pierna — Calculadora RIR",
   "short_name": "Rutina RIR",
   "description": "Calculadora de peso por serie basada en RIR para rutina torso/pierna.",
-  "start_url": "./rutina.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
