@@ -1,7 +1,7 @@
 // Service Worker — Rutina RIR PWA
 // Estrategia: cache-first (offline total tras la primera carga).
 // Cambia CACHE_VERSION para forzar actualización tras editar rutina.html.
-const CACHE_VERSION = "rutina-rir-v2";
+const CACHE_VERSION = "rutina-rir-v3";
 const CORE_ASSETS = [
   "./",
   "./index.html",

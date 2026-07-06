@@ -205,20 +205,124 @@
     margin-bottom: 2px;
   }
   .next-session {
-    background: rgba(58,166,117,0.08);
-    border: 1px solid rgba(58,166,117,0.3);
-    padding: 10px 12px;
-    border-radius: 6px;
-    text-align: center;
-    font-size: 13px;
-    color: var(--accent-2);
-    margin: 10px 16px 14px;
-    display: flex;
-    justify-content: space-between;
+    display: none;
+    margin: 12px 16px 16px;
+    padding: 16px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
     align-items: center;
+    gap: 18px;
   }
-  .next-session.up { background: rgba(58,166,117,0.15); border-color: var(--accent-2); }
-  .next-session.hold { background: rgba(224,168,58,0.08); border-color: rgba(224,168,58,0.3); color: var(--warn); }
+  .next-session.visible { display: flex; flex-wrap: wrap; }
+  .next-session .ns-icon { font-size: 32px; line-height: 1; flex-shrink: 0; }
+  .next-session .ns-main { flex: 1; min-width: 200px; }
+  .next-session .ns-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .next-session .ns-weight {
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .next-session .ns-target { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .next-session .ns-target b { color: var(--text); font-weight: 600; }
+  .next-session .ns-reason {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+    max-width: 260px;
+    line-height: 1.4;
+  }
+  .next-session.up {
+    background: linear-gradient(135deg, rgba(58,166,117,0.18), rgba(58,166,117,0.04));
+    border-color: var(--accent-2);
+  }
+  .next-session.up .ns-weight { color: var(--accent-2); }
+  .next-session.hold {
+    background: linear-gradient(135deg, rgba(224,168,58,0.14), rgba(224,168,58,0.03));
+    border-color: rgba(224,168,58,0.5);
+  }
+  .next-session.hold .ns-weight { color: var(--warn); }
+
+  .next-weight-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(79,140,255,0.15);
+    color: var(--accent);
+    margin-left: 8px;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
+  }
+  .next-weight-pill.up { background: rgba(58,166,117,0.2); color: var(--accent-2); }
+  .next-weight-pill.hold { background: rgba(224,168,58,0.18); color: var(--warn); }
+  .next-weight-pill.hidden { display: none; }
+
+  .summary-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 12px 0 14px;
+    overflow: hidden;
+  }
+  .summary-card summary {
+    padding: 12px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    color: var(--text);
+  }
+  .summary-card summary::-webkit-details-marker { display: none; }
+  .summary-card summary::after {
+    content: "▸";
+    color: var(--muted);
+    transition: transform 0.15s;
+  }
+  .summary-card[open] summary::after { transform: rotate(90deg); }
+  .summary-list { padding: 4px 16px 14px; }
+  .summary-row {
+    display: grid;
+    grid-template-columns: 1.6fr auto auto;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    align-items: center;
+    font-size: 13px;
+  }
+  .summary-row:first-child { border-top: none; }
+  .summary-row .sr-name { color: var(--text); font-weight: 500; }
+  .summary-row .sr-target { color: var(--muted); font-size: 12px; text-align: right; }
+  .summary-row .sr-weight {
+    font-weight: 700;
+    color: var(--text);
+    text-align: right;
+    min-width: 90px;
+    font-size: 15px;
+  }
+  .summary-row.up .sr-weight { color: var(--accent-2); }
+  .summary-row.hold .sr-weight { color: var(--warn); }
+  .summary-row .sr-weight small {
+    display: block;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .summary-empty { color: var(--muted); font-size: 13px; padding: 8px 0; text-align: center; }
   .info-box {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -360,6 +464,7 @@ const ROUTINE = {
 const STORAGE_KEY = "rutina-torso-pierna-v1";
 let currentSession = "torso-a";
 let state = {};   // state[sessionId][exIndex][setIndex] = { w, r, rir }
+let nextSessionMap = {};  // nextSessionMap[sid][exIdx] = { mode, weight, targetReps, targetRIR, reason }
 
 // =========================================================
 // Utils
@@ -407,6 +512,12 @@ function buildSessions() {
         <h2>${s.name}</h2>
         <span class="badge ${s.tagClass}">${s.tag}</span>
       </div>
+      <details class="summary-card" id="summary-${id}">
+        <summary>📋 Resumen próxima sesión</summary>
+        <div class="summary-list" id="summary-list-${id}">
+          <div class="summary-empty">Registra al menos una serie para ver el resumen.</div>
+        </div>
+      </details>
     `;
 
     s.exercises.forEach((ex, exIdx) => {
@@ -416,7 +527,7 @@ function buildSessions() {
       const repsLabel = `${ex.repsMin}-${ex.repsMax}`;
       exDiv.innerHTML = `
         <div class="ex-header">
-          <div class="ex-name">${ex.name}</div>
+          <div class="ex-name">${ex.name}<span class="next-weight-pill hidden" id="pill-${id}-${exIdx}"></span></div>
           <div class="ex-meta"><span>Series</span><span>${ex.sets}</span></div>
           <div class="ex-meta"><span>Reps</span><span>${repsLabel}</span></div>
           <div class="ex-meta"><span>RIR</span><span>${rirLabel}</span></div>
@@ -534,23 +645,33 @@ function computeExercise(sid, exIdx) {
 
   // next session recommendation (doble progresión)
   const ns = document.getElementById(`ns-${sid}-${exIdx}`);
+  const pill = document.getElementById(`pill-${sid}-${exIdx}`);
+  const rirLabel = ex.rirMin === ex.rirMax ? `${ex.rirMin}` : `${ex.rirMin}-${ex.rirMax}`;
+
+  if (!nextSessionMap[sid]) nextSessionMap[sid] = {};
+
   if (!anyFilled) {
-    ns.style.display = "none";
     ns.className = "next-session";
     ns.innerHTML = "";
+    pill.className = "next-weight-pill hidden";
+    pill.textContent = "";
+    delete nextSessionMap[sid][exIdx];
   } else {
-    ns.style.display = "flex";
     // find last recorded weight
     let lastW = null;
     for (let i = ex.sets - 1; i >= 0; i--) {
       if (setStates[i] && num(setStates[i].w) !== null) { lastW = num(setStates[i].w); break; }
     }
+
+    let mode, weight, targetRepsLabel, reason;
     if (allTop && lastW !== null) {
-      const nextW = roundTo(lastW + useInc, useInc);
-      ns.className = "next-session up";
-      ns.innerHTML = `<span>✅ Progresión: la próxima sesión sube a <b>${nextW.toFixed(2)} kg</b> y vuelve al rango bajo (${ex.repsMin}-${ex.repsMin+1} reps).</span><span style="color:var(--muted);font-size:12px">Regla: todas las series al tope del rango con RIR objetivo</span>`;
+      mode = "up";
+      weight = roundTo(lastW + useInc, useInc);
+      targetRepsLabel = `${ex.repsMin}-${ex.repsMin+1}`;
+      reason = "Subes peso — completaste el tope del rango en todas las series. Vuelve al rango bajo.";
     } else if (lastW !== null) {
-      // Compute recommended weight to hit low-mid of range next session using best e1RM
+      mode = "hold";
+      // recommended weight from best e1RM to hit the mid of the range
       let bestE1 = 0;
       for (let i = 0; i < ex.sets; i++) {
         const c = setStates[i] || {};
@@ -560,11 +681,52 @@ function computeExercise(sid, exIdx) {
         }
       }
       const rec = bestE1 > 0 ? weightForTarget(bestE1, targetReps, targetRIR) : lastW;
-      const recRounded = roundTo(rec, useInc);
-      ns.className = "next-session hold";
-      ns.innerHTML = `<span>⏸ Mantén peso próxima sesión (~<b>${recRounded.toFixed(2)} kg</b>) e intenta más reps hasta llegar al tope (${ex.repsMax}).</span><span style="color:var(--muted);font-size:12px">Objetivo: ${ex.repsMax} reps a RIR ${ex.rirMin === ex.rirMax ? ex.rirMin : ex.rirMin+"-"+ex.rirMax} en todas las series</span>`;
+      weight = roundTo(rec, useInc);
+      targetRepsLabel = `${ex.repsMax}`;
+      reason = `Mantén peso — apunta a ${ex.repsMax} reps en todas las series para progresar al siguiente peso.`;
+    }
+
+    if (mode) {
+      const icon = mode === "up" ? "🔺" : "⏸";
+      ns.className = `next-session ${mode} visible`;
+      ns.innerHTML = `
+        <div class="ns-icon">${icon}</div>
+        <div class="ns-main">
+          <div class="ns-label">Próxima sesión — empieza con</div>
+          <div class="ns-weight">${weight.toFixed(2)} kg</div>
+          <div class="ns-target">${ex.sets} series × <b>${targetRepsLabel}</b> reps @ RIR <b>${rirLabel}</b></div>
+        </div>
+        <div class="ns-reason">${reason}</div>
+      `;
+      pill.className = `next-weight-pill ${mode}`;
+      pill.textContent = `Próx: ${weight.toFixed(2)} kg`;
+      nextSessionMap[sid][exIdx] = { mode, weight, targetRepsLabel, rirLabel, sets: ex.sets };
     }
   }
+
+  // refresh session summary
+  renderSummary(sid);
+}
+
+function renderSummary(sid) {
+  const listEl = document.getElementById(`summary-list-${sid}`);
+  if (!listEl) return;
+  const map = nextSessionMap[sid] || {};
+  const entries = ROUTINE[sid].exercises
+    .map((ex, i) => ({ ex, i, rec: map[i] }))
+    .filter(e => e.rec);
+
+  if (entries.length === 0) {
+    listEl.innerHTML = `<div class="summary-empty">Registra al menos una serie para ver el resumen.</div>`;
+    return;
+  }
+  listEl.innerHTML = entries.map(({ ex, rec }) => `
+    <div class="summary-row ${rec.mode}">
+      <div class="sr-name">${ex.name}</div>
+      <div class="sr-target">${rec.sets}×${rec.targetRepsLabel} @ RIR ${rec.rirLabel}</div>
+      <div class="sr-weight">${rec.weight.toFixed(2)} kg<small>${rec.mode === "up" ? "↑ subir" : "= mantener"}</small></div>
+    </div>
+  `).join("");
 }
 
 function renderAll() {
