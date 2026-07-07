@@ -204,6 +204,21 @@
     letter-spacing: 0.4px;
     margin-bottom: 2px;
   }
+  .suggest .sg-weight { font-size: 15px; font-weight: 700; color: var(--accent); }
+  .suggest .sg-delta {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+  .suggest .sg-target {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 500;
+    margin-top: 2px;
+    letter-spacing: 0.2px;
+  }
+  .suggest .sg-target b { color: var(--text); font-weight: 600; }
   .next-session {
     display: none;
     margin: 12px 16px 16px;
@@ -359,12 +374,84 @@
     .sets .head:nth-child(5), .sets .head:nth-child(6) { display: none; }
     .suggest, .set-note { grid-column: 2 / -1; }
   }
+
+  /* ============ Modo edición ============ */
+  .edit-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 7px;
+    border-radius: 4px;
+    font-size: 13px;
+    width: 100%;
+    min-width: 40px;
+    text-align: center;
+    font-family: inherit;
+  }
+  .edit-input:focus { outline: none; border-color: var(--accent); }
+  .edit-input.edit-name, .edit-input.edit-ex-name {
+    font-weight: 600;
+    font-size: 15px;
+    text-align: left;
+  }
+  .icon-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 5px 9px;
+    border-radius: 6px;
+    line-height: 1;
+  }
+  .icon-btn:hover { background: var(--panel-2); }
+  .icon-btn.danger { color: var(--danger); border-color: rgba(224,83,58,0.4); }
+  .icon-btn.danger:hover { background: rgba(224,83,58,0.12); }
+  .tab.tab-add {
+    background: transparent;
+    color: var(--muted);
+    border-style: dashed;
+  }
+  .tab.tab-add:hover { color: var(--accent); border-color: var(--accent); box-shadow: none; }
+  .add-exercise {
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px dashed var(--border);
+    border-top: none;
+    text-align: center;
+    border-radius: 0 0 10px 10px;
+  }
+  .add-exercise button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .add-exercise button:hover { border-color: var(--accent); color: var(--accent); }
+  .ex-header.editing {
+    grid-template-columns: 2.4fr 0.7fr 1.2fr 1.2fr 1.4fr 0.9fr;
+    align-items: end;
+    gap: 8px;
+  }
+  .ex-header.editing .ex-meta span:first-child { margin-bottom: 4px; }
+  .ex-actions { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
+  body.edit-mode .toolbar { border-color: var(--accent); }
+  .field-pair { display: flex; gap: 4px; }
+  .field-pair .edit-input { flex: 1; min-width: 0; }
+  @media (max-width: 900px) {
+    .ex-header.editing { grid-template-columns: 1fr; }
+    .ex-actions { justify-content: flex-start; margin-top: 6px; }
+  }
 </style>
 </head>
 <body>
 
-<h1>Rutina Torso / Pierna — Calculadora RIR</h1>
-<div class="sub">Fuerza + hipertrofia · 4 sesiones rotatorias (A-B-A-B) · Doble progresión</div>
+<h1>Calculadora RIR</h1>
+<div class="sub">Rutina editable · Doble progresión con estimación de e1RM · PWA offline</div>
 
 <div class="toolbar">
   <label>Incremento kg:
@@ -374,13 +461,22 @@
       <option value="5">5</option>
     </select>
   </label>
-  <label>Factor fatiga por serie (%):
-    <input type="number" id="fatigue" value="2" min="0" max="10" step="0.5" style="width:60px">
+  <label>Estrategia:
+    <select id="strategy" title="Dónde apuntar dentro del rango de reps al calcular el peso">
+      <option value="low" selected>Agresiva (rango bajo)</option>
+      <option value="mid">Balanceada (medio)</option>
+      <option value="high">Conservadora (rango alto)</option>
+    </select>
   </label>
-  <button onclick="saveData()">💾 Guardar</button>
-  <button class="secondary" onclick="loadData()">↺ Recargar guardado</button>
-  <button class="danger" onclick="resetSession()">🗑 Vaciar sesión actual</button>
-  <span style="margin-left:auto;color:var(--muted);font-size:12px" id="save-status">Los datos se guardan automáticamente</span>
+  <label title="Descuento por serie por acumulación de fatiga. 0% = ignorar fatiga.">Fatiga por serie (%):
+    <input type="number" id="fatigue" value="0" min="0" max="10" step="0.5" style="width:60px">
+  </label>
+  <button id="edit-toggle" class="secondary" onclick="toggleEditMode()">✏️ Editar rutina</button>
+  <button class="secondary" onclick="exportRoutine()" title="Descargar rutina + registros en JSON">⬇️ Exportar</button>
+  <button class="secondary" onclick="importRoutine()" title="Cargar rutina desde JSON">⬆️ Importar</button>
+  <button class="secondary" onclick="resetRoutine()" title="Volver a la rutina del PDF original">🔄 Rutina PDF</button>
+  <button class="danger" onclick="resetSession()">🗑 Vaciar sesión</button>
+  <span style="margin-left:auto;color:var(--muted);font-size:12px" id="save-status">Guardado automático</span>
 </div>
 
 <div class="tabs" id="tabs"></div>
@@ -389,220 +485,356 @@
 <div class="info-box">
   <details open>
     <summary>Cómo funciona</summary>
-    <p><b>Introduce peso, repeticiones y RIR</b> tras cada serie. La celda azul te sugiere el peso de la <b>siguiente serie</b> para mantenerte dentro del rango de reps y RIR marcado en la rutina.</p>
-    <p><b>Fórmula:</b> se estima tu 1RM con Epley usando reps + RIR como reps hasta el fallo:
+    <p><b>Introduce peso, repeticiones y RIR</b> tras cada serie. La celda azul te sugiere el peso de la <b>siguiente serie</b> ajustado a lo que acabas de hacer (no un +2,5 kg fijo).</p>
+    <p><b>Fórmula:</b> estima tu 1RM con Epley usando reps + RIR como reps hasta el fallo:
       <br><code>e1RM = peso × (1 + (reps + RIR) / 30)</code>
-      <br>Y el peso sugerido para la siguiente serie:
-      <br><code>peso siguiente = e1RM / (1 + (reps_objetivo + RIR_objetivo) / 30) × (1 − fatiga%)</code>
-      <br>Objetivo = punto medio del rango de reps del ejercicio y RIR medio marcado. Se redondea al incremento elegido.</p>
-    <p><b>Doble progresión (banner verde/amarillo bajo cada ejercicio):</b> cuando <b>todas las series</b> lleguen al extremo alto del rango de reps con el RIR objetivo, el banner verde te sugiere subir peso la próxima sesión. Si no llegas, se queda amarillo y mantienes.</p>
+      <br>Y el peso de la próxima serie para caer en el objetivo:
+      <br><code>peso = e1RM / (1 + (reps_objetivo + RIR_objetivo) / 30) × (1 − fatiga%)</code>
+      <br>Se redondea al incremento del ejercicio (2,5 kg compuestos, 1,25 kg aislados, 5 kg pierna pesada).</p>
+    <p><b>Estrategia</b> — qué punto del rango de reps se usa como objetivo:</p>
+    <ul style="margin:6px 0 12px 20px;padding:0;color:var(--muted)">
+      <li><b>Agresiva (rango bajo)</b> — apunta al mínimo de reps → peso más alto, forzando la progresión. Recomendada.</li>
+      <li><b>Balanceada (medio)</b> — apunta al centro del rango.</li>
+      <li><b>Conservadora (rango alto)</b> — apunta al máximo de reps → peso más bajo, más margen.</li>
+    </ul>
+    <p><b>Ejemplo con Agresiva:</b> plan 6-8 reps @ RIR 2, haces 40 kg × 8 @ RIR 4 → e1RM = 56 kg → objetivo 6 reps @ RIR 2 → 56 / (1+8/30) = 44,2 kg → <b>redondeo a 45 kg</b> (+5 kg). Con la balanceada saldrían 42,5 kg.</p>
+    <p><b>Fatiga por serie:</b> descuento porcentual aplicado a la siguiente serie por acumulación de cansancio. 0 % por defecto (Epley ya es conservador). Ponlo en 1-2 % si en compuestos pesados notas que caes de reps de serie a serie.</p>
+    <p><b>Doble progresión (tarjeta grande bajo cada ejercicio):</b> cuando <b>todas las series</b> lleguen al extremo alto del rango con el RIR objetivo, la tarjeta verde te dice el nuevo peso para la próxima sesión. Si no llegas, se queda ámbar y mantienes peso.</p>
+    <p><b>Editar la rutina:</b> pulsa <b>✏️ Editar rutina</b> para renombrar ejercicios y sesiones, cambiar series/reps/RIR/descanso/incremento, añadir o eliminar ejercicios (➕ y 🗑) y reordenarlos (🔼🔽). Usa <b>➕ Añadir sesión</b> en las pestañas para crear una nueva. Los cambios se guardan al momento.</p>
+    <p><b>Exportar / importar:</b> <b>⬇️ Exportar</b> descarga un JSON con tu rutina y todos tus registros (útil como copia de seguridad o para pasar entre móvil y ordenador). <b>⬆️ Importar</b> lo restaura. <b>🔄 Rutina PDF</b> vuelve a la rutina original del documento.</p>
     <p><b>RIR</b> = repeticiones en reserva (las que te quedarían antes del fallo).</p>
   </details>
 </div>
 
 <script>
 // =========================================================
-// Datos de la rutina (extraídos del PDF)
+// DEFAULT_ROUTINE — semilla desde el PDF, con IDs estables
 // =========================================================
-const ROUTINE = {
-  "torso-a": {
-    name: "Torso A",
-    tag: "Fuerza",
-    tagClass: "fuerza",
-    exercises: [
-      { name: "Press banca",                         sets: 4, repsMin: 4,  repsMax: 6,  rirMin: 2, rirMax: 2, rest: "2-3 min", inc: 2.5 },
-      { name: "Dominadas o jalón",                   sets: 4, repsMin: 5,  repsMax: 8,  rirMin: 2, rirMax: 2, rest: "2-3 min", inc: 2.5 },
-      { name: "Press militar (barra/mancuernas)",    sets: 3, repsMin: 6,  repsMax: 8,  rirMin: 2, rirMax: 2, rest: "2 min",   inc: 2.5 },
-      { name: "Remo máquina",                        sets: 3, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 2, rest: "90 s",    inc: 2.5 },
-      { name: "Curl barra Z (banco Scott)",          sets: 3, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 1.25 },
-      { name: "Extensión katana tríceps",            sets: 3, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 1.25 },
-      { name: "Elevación lateral polea",             sets: 3, repsMin: 12, repsMax: 15, rirMin: 0, rirMax: 1, rest: "60 s",    inc: 1.25 },
-    ]
-  },
-  "pierna-a": {
-    name: "Pierna A",
-    tag: "Fuerza",
-    tagClass: "fuerza",
-    exercises: [
-      { name: "Sentadilla hack",                     sets: 4, repsMin: 4,  repsMax: 6,  rirMin: 2, rirMax: 2, rest: "2-3 min", inc: 5 },
-      { name: "Peso muerto rumano",                  sets: 3, repsMin: 6,  repsMax: 8,  rirMin: 2, rirMax: 2, rest: "2-3 min", inc: 2.5 },
-      { name: "Prensa o zancadas",                   sets: 3, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 2, rest: "2 min",   inc: 5 },
-      { name: "Flexión isquios sentado",             sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 2.5 },
-      { name: "Extensión cuádriceps",                sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 2.5 },
-      { name: "Gemelo de pie",                       sets: 4, repsMin: 12, repsMax: 15, rirMin: 0, rirMax: 1, rest: "60 s",    inc: 2.5 },
-    ]
-  },
-  "torso-b": {
-    name: "Torso B",
-    tag: "Hipertrofia",
-    tagClass: "hipertrofia",
-    exercises: [
-      { name: "Press inclinado",                     sets: 4, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 2, rest: "90 s",    inc: 2.5 },
-      { name: "Remo máquina",                        sets: 4, repsMin: 8,  repsMax: 12, rirMin: 1, rirMax: 2, rest: "90 s",    inc: 2.5 },
-      { name: "Press militar máquina",               sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 2.5 },
-      { name: "Jalón unilateral",                    sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 2.5 },
-      { name: "Curl Bayesian",                       sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "60 s",    inc: 1.25 },
-      { name: "Extensión máquina cuerda",            sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "60 s",    inc: 1.25 },
-      { name: "Elevación lateral polea",             sets: 3, repsMin: 12, repsMax: 15, rirMin: 0, rirMax: 1, rest: "60 s",    inc: 1.25 },
-    ]
-  },
-  "pierna-b": {
-    name: "Pierna B",
-    tag: "Hipertrofia",
-    tagClass: "hipertrofia",
-    exercises: [
-      { name: "Peso muerto rígido",                  sets: 4, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 2, rest: "2 min",   inc: 2.5 },
-      { name: "Sentadilla hack",                     sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 5 },
-      { name: "Flexión isquios sentado",             sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 2.5 },
-      { name: "Extensión cuádriceps",                sets: 3, repsMin: 12, repsMax: 15, rirMin: 0, rirMax: 1, rest: "60 s",    inc: 2.5 },
-      { name: "Hip thrust o abductores",             sets: 3, repsMin: 12, repsMax: 15, rirMin: 1, rirMax: 1, rest: "60 s",    inc: 2.5 },
-      { name: "Gemelo sentado",                      sets: 4, repsMin: 15, repsMax: 20, rirMin: 0, rirMax: 1, rest: "45 s",    inc: 2.5 },
-    ]
-  },
+const DEFAULT_ROUTINE = {
+  sessions: [
+    {
+      id: "torso-a", name: "Torso A", tag: "Fuerza", tagClass: "fuerza",
+      exercises: [
+        { id: "ta-press-banca",     name: "Press banca",                      sets: 4, repsMin: 4,  repsMax: 6,  rirMin: 2, rirMax: 2, rest: "2-3 min", inc: 2.5 },
+        { id: "ta-dominadas",       name: "Dominadas o jalón",                sets: 4, repsMin: 5,  repsMax: 8,  rirMin: 2, rirMax: 2, rest: "2-3 min", inc: 2.5 },
+        { id: "ta-press-militar",   name: "Press militar (barra/mancuernas)", sets: 3, repsMin: 6,  repsMax: 8,  rirMin: 2, rirMax: 2, rest: "2 min",   inc: 2.5 },
+        { id: "ta-remo-maquina",    name: "Remo máquina",                     sets: 3, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 2, rest: "90 s",    inc: 2.5 },
+        { id: "ta-curl-z",          name: "Curl barra Z (banco Scott)",       sets: 3, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 1.25 },
+        { id: "ta-katana",          name: "Extensión katana tríceps",         sets: 3, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 1.25 },
+        { id: "ta-lateral",         name: "Elevación lateral polea",          sets: 3, repsMin: 12, repsMax: 15, rirMin: 0, rirMax: 1, rest: "60 s",    inc: 1.25 },
+      ]
+    },
+    {
+      id: "pierna-a", name: "Pierna A", tag: "Fuerza", tagClass: "fuerza",
+      exercises: [
+        { id: "pa-sentadilla-hack", name: "Sentadilla hack",       sets: 4, repsMin: 4,  repsMax: 6,  rirMin: 2, rirMax: 2, rest: "2-3 min", inc: 5 },
+        { id: "pa-rumano",          name: "Peso muerto rumano",    sets: 3, repsMin: 6,  repsMax: 8,  rirMin: 2, rirMax: 2, rest: "2-3 min", inc: 2.5 },
+        { id: "pa-prensa",          name: "Prensa o zancadas",     sets: 3, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 2, rest: "2 min",   inc: 5 },
+        { id: "pa-isquios",         name: "Flexión isquios sentado", sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s", inc: 2.5 },
+        { id: "pa-cuadriceps",      name: "Extensión cuádriceps",  sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s",    inc: 2.5 },
+        { id: "pa-gemelo",          name: "Gemelo de pie",         sets: 4, repsMin: 12, repsMax: 15, rirMin: 0, rirMax: 1, rest: "60 s",    inc: 2.5 },
+      ]
+    },
+    {
+      id: "torso-b", name: "Torso B", tag: "Hipertrofia", tagClass: "hipertrofia",
+      exercises: [
+        { id: "tb-press-inclinado", name: "Press inclinado",         sets: 4, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 2, rest: "90 s", inc: 2.5 },
+        { id: "tb-remo-maquina",    name: "Remo máquina",            sets: 4, repsMin: 8,  repsMax: 12, rirMin: 1, rirMax: 2, rest: "90 s", inc: 2.5 },
+        { id: "tb-press-militar",   name: "Press militar máquina",   sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s", inc: 2.5 },
+        { id: "tb-jalon-unilateral", name: "Jalón unilateral",       sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s", inc: 2.5 },
+        { id: "tb-curl-bayesian",   name: "Curl Bayesian",           sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "60 s", inc: 1.25 },
+        { id: "tb-triceps-cuerda",  name: "Extensión máquina cuerda", sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "60 s", inc: 1.25 },
+        { id: "tb-lateral",         name: "Elevación lateral polea", sets: 3, repsMin: 12, repsMax: 15, rirMin: 0, rirMax: 1, rest: "60 s", inc: 1.25 },
+      ]
+    },
+    {
+      id: "pierna-b", name: "Pierna B", tag: "Hipertrofia", tagClass: "hipertrofia",
+      exercises: [
+        { id: "pb-rigido",          name: "Peso muerto rígido",      sets: 4, repsMin: 8,  repsMax: 10, rirMin: 1, rirMax: 2, rest: "2 min", inc: 2.5 },
+        { id: "pb-hack",            name: "Sentadilla hack",         sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s",  inc: 5 },
+        { id: "pb-isquios",         name: "Flexión isquios sentado", sets: 3, repsMin: 10, repsMax: 12, rirMin: 1, rirMax: 1, rest: "90 s",  inc: 2.5 },
+        { id: "pb-cuadriceps",      name: "Extensión cuádriceps",    sets: 3, repsMin: 12, repsMax: 15, rirMin: 0, rirMax: 1, rest: "60 s",  inc: 2.5 },
+        { id: "pb-hip-thrust",      name: "Hip thrust o abductores", sets: 3, repsMin: 12, repsMax: 15, rirMin: 1, rirMax: 1, rest: "60 s",  inc: 2.5 },
+        { id: "pb-gemelo-sentado",  name: "Gemelo sentado",          sets: 4, repsMin: 15, repsMax: 20, rirMin: 0, rirMax: 1, rest: "45 s",  inc: 2.5 },
+      ]
+    }
+  ]
 };
 
+// =========================================================
+// Estado
+// =========================================================
 const STORAGE_KEY = "rutina-torso-pierna-v1";
-let currentSession = "torso-a";
-let state = {};   // state[sessionId][exIndex][setIndex] = { w, r, rir }
-let nextSessionMap = {};  // nextSessionMap[sid][exIdx] = { mode, weight, targetReps, targetRIR, reason }
+const ROUTINE_KEY = "rutina-torso-pierna-routine-v1";
+let routine = null;
+let state = {};              // state[sessionId][exerciseId][setIdx] = { w, r, rir }
+let currentSession = null;
+let nextSessionMap = {};     // nextSessionMap[sid][exId] = { mode, weight, tRepsLabel, rirLabel, sets, exName }
+let editMode = false;
 
 // =========================================================
 // Utils
 // =========================================================
 function num(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
-function roundTo(val, step) {
-  return Math.round(val / step) * step;
+function roundTo(val, step) { return Math.round(val / step) * step; }
+function e1rm(w, r, rir) { return w * (1 + (r + rir) / 30); }
+function weightForTarget(est, tr, trir) { return est / (1 + (tr + trir) / 30); }
+function newId(prefix) { return prefix + "_" + Math.random().toString(36).slice(2, 8); }
+function getSession(sid) { return routine?.sessions.find(s => s.id === sid); }
+function getExercise(sid, exId) { return getSession(sid)?.exercises.find(e => e.id === exId); }
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
-// Epley e1RM: reps to failure = reps + RIR
-function e1rm(weight, reps, rir) {
-  const rf = reps + rir;
-  return weight * (1 + rf / 30);
-}
-// Weight required to hit target reps at target RIR from a given e1RM
-function weightForTarget(estimatedE1RM, targetReps, targetRIR) {
-  const rf = targetReps + targetRIR;
-  return estimatedE1RM / (1 + rf / 30);
-}
-
-// =========================================================
-// Rendering
-// =========================================================
-function buildTabs() {
-  const tabs = document.getElementById("tabs");
-  tabs.innerHTML = "";
-  Object.entries(ROUTINE).forEach(([id, s]) => {
-    const btn = document.createElement("div");
-    btn.className = "tab" + (id === currentSession ? " active" : "");
-    btn.textContent = s.name;
-    btn.onclick = () => { currentSession = id; buildTabs(); renderAll(); };
-    tabs.appendChild(btn);
+function assignMissingIds(r) {
+  r.sessions.forEach(s => {
+    if (!s.id) s.id = newId("s");
+    if (!Array.isArray(s.exercises)) s.exercises = [];
+    s.exercises.forEach(ex => { if (!ex.id) ex.id = newId("ex"); });
   });
+  return r;
+}
+function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+// =========================================================
+// Persistencia
+// =========================================================
+function saveRoutine() {
+  try { localStorage.setItem(ROUTINE_KEY, JSON.stringify(routine)); }
+  catch (e) { console.warn("saveRoutine:", e); }
+}
+function loadRoutine() {
+  try {
+    const raw = localStorage.getItem(ROUTINE_KEY);
+    if (raw) {
+      const r = JSON.parse(raw);
+      if (r && Array.isArray(r.sessions)) return assignMissingIds(r);
+    }
+  } catch (e) { console.warn("loadRoutine:", e); }
+  return assignMissingIds(deepClone(DEFAULT_ROUTINE));
 }
 
-function buildSessions() {
-  const container = document.getElementById("sessions");
-  container.innerHTML = "";
-  Object.entries(ROUTINE).forEach(([id, s]) => {
-    const div = document.createElement("div");
-    div.className = "session" + (id === currentSession ? " active" : "");
-    div.id = "session-" + id;
+function saveData(silent = false) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      state,
+      increment: document.getElementById("increment").value,
+      fatigue: document.getElementById("fatigue").value,
+      strategy: document.getElementById("strategy").value,
+      currentSession,
+    }));
+    if (!silent) flash("Guardado ✅");
+  } catch (e) { flash("Error al guardar: " + e.message); }
+}
 
-    div.innerHTML = `
-      <div class="session-header">
-        <h2>${s.name}</h2>
-        <span class="badge ${s.tagClass}">${s.tag}</span>
-      </div>
-      <details class="summary-card" id="summary-${id}">
-        <summary>📋 Resumen próxima sesión</summary>
-        <div class="summary-list" id="summary-list-${id}">
-          <div class="summary-empty">Registra al menos una serie para ver el resumen.</div>
-        </div>
-      </details>
-    `;
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    state = migrateState(data.state || {});
+    if (data.increment) document.getElementById("increment").value = data.increment;
+    if (data.fatigue !== undefined) document.getElementById("fatigue").value = data.fatigue;
+    if (data.strategy) document.getElementById("strategy").value = data.strategy;
+    if (data.currentSession && getSession(data.currentSession)) currentSession = data.currentSession;
+  } catch (e) { flash("Error al cargar: " + e.message); }
+}
 
-    s.exercises.forEach((ex, exIdx) => {
-      const exDiv = document.createElement("div");
-      exDiv.className = "exercise";
-      const rirLabel = ex.rirMin === ex.rirMax ? ex.rirMin : `${ex.rirMin}-${ex.rirMax}`;
-      const repsLabel = `${ex.repsMin}-${ex.repsMax}`;
-      exDiv.innerHTML = `
-        <div class="ex-header">
-          <div class="ex-name">${ex.name}<span class="next-weight-pill hidden" id="pill-${id}-${exIdx}"></span></div>
-          <div class="ex-meta"><span>Series</span><span>${ex.sets}</span></div>
-          <div class="ex-meta"><span>Reps</span><span>${repsLabel}</span></div>
-          <div class="ex-meta"><span>RIR</span><span>${rirLabel}</span></div>
-          <div class="ex-meta"><span>Descanso</span><span>${ex.rest}</span></div>
-        </div>
-        <div class="sets" id="sets-${id}-${exIdx}"></div>
-        <div class="next-session" id="ns-${id}-${exIdx}"></div>
-      `;
-      div.appendChild(exDiv);
-
-      // header row
-      const setsDiv = exDiv.querySelector(`#sets-${id}-${exIdx}`);
-      setsDiv.innerHTML = `
-        <div class="head">Serie</div>
-        <div class="head">Peso (kg)</div>
-        <div class="head">Reps</div>
-        <div class="head">RIR</div>
-        <div class="head">Sugerencia siguiente</div>
-        <div class="head">e1RM</div>
-      `;
-      for (let i = 0; i < ex.sets; i++) {
-        setsDiv.innerHTML += `
-          <div class="set-label">#${i+1}</div>
-          <input type="number" step="${ex.inc}" data-s="${id}" data-e="${exIdx}" data-i="${i}" data-f="w" placeholder="—">
-          <input type="number" step="1" data-s="${id}" data-e="${exIdx}" data-i="${i}" data-f="r" placeholder="—">
-          <input type="number" step="1" data-s="${id}" data-e="${exIdx}" data-i="${i}" data-f="rir" placeholder="—">
-          <div class="suggest empty" id="sg-${id}-${exIdx}-${i}"><span class="hint">Próxima serie</span>—</div>
-          <div class="suggest empty" id="e1-${id}-${exIdx}-${i}"><span class="hint">e1RM</span>—</div>
-        `;
+// Migración: state con índices numéricos → state con IDs de ejercicio
+function migrateState(oldState) {
+  const newState = {};
+  for (const [sid, exMap] of Object.entries(oldState || {})) {
+    const session = getSession(sid);
+    if (!session) continue;
+    newState[sid] = {};
+    for (const [key, sets] of Object.entries(exMap)) {
+      if (/^\d+$/.test(key)) {
+        const idx = parseInt(key, 10);
+        const ex = session.exercises[idx];
+        if (ex) newState[sid][ex.id] = sets;
+      } else {
+        newState[sid][key] = sets;
       }
-      container.appendChild(div);
-    });
-
-    container.appendChild(div);
-  });
-
-  // wire inputs
-  document.querySelectorAll('.sets input').forEach(inp => {
-    inp.addEventListener("input", handleInput);
-  });
+    }
+  }
+  return newState;
 }
 
-function handleInput(e) {
-  const s = e.target.dataset.s;
-  const ex = +e.target.dataset.e;
-  const i = +e.target.dataset.i;
-  const f = e.target.dataset.f;
-  if (!state[s]) state[s] = {};
-  if (!state[s][ex]) state[s][ex] = {};
-  if (!state[s][ex][i]) state[s][ex][i] = {};
-  const val = e.target.value === "" ? null : parseFloat(e.target.value);
-  state[s][ex][i][f] = val;
-  computeExercise(s, ex);
+// =========================================================
+// CRUD de rutina
+// =========================================================
+function updateExField(sid, exId, field, value) {
+  const ex = getExercise(sid, exId);
+  if (!ex) return;
+  if (["sets", "repsMin", "repsMax", "rirMin", "rirMax", "inc"].includes(field)) {
+    const n = parseFloat(value);
+    ex[field] = isNaN(n) ? ex[field] : n;
+  } else {
+    ex[field] = value;
+  }
+  saveRoutine();
+  // en modo edición no necesitamos rebuildear la lista de sets, sólo header
+  if (!editMode) buildAll();
+}
+
+function updateSessionField(sid, field, value) {
+  const s = getSession(sid);
+  if (!s) return;
+  s[field] = value;
+  if (field === "tag") {
+    s.tagClass = value.toLowerCase() === "fuerza" ? "fuerza" : "hipertrofia";
+  }
+  saveRoutine();
+  buildAll();
+}
+
+function addExercise(sid) {
+  const s = getSession(sid);
+  if (!s) return;
+  s.exercises.push({
+    id: newId("ex"),
+    name: "Nuevo ejercicio",
+    sets: 3, repsMin: 8, repsMax: 12, rirMin: 1, rirMax: 2,
+    rest: "90 s", inc: 2.5,
+  });
+  saveRoutine();
+  buildAll();
+}
+
+function removeExercise(sid, exId) {
+  const ex = getExercise(sid, exId);
+  if (!ex) return;
+  if (!confirm(`¿Eliminar "${ex.name}"? Se perderán los registros de series de este ejercicio.`)) return;
+  const s = getSession(sid);
+  s.exercises = s.exercises.filter(e => e.id !== exId);
+  if (state[sid]) delete state[sid][exId];
+  saveRoutine();
   saveData(true);
+  buildAll();
 }
 
-function computeExercise(sid, exIdx) {
-  const ex = ROUTINE[sid].exercises[exIdx];
+function moveExercise(sid, exId, dir) {
+  const s = getSession(sid);
+  const i = s.exercises.findIndex(e => e.id === exId);
+  const j = i + dir;
+  if (j < 0 || j >= s.exercises.length) return;
+  [s.exercises[i], s.exercises[j]] = [s.exercises[j], s.exercises[i]];
+  saveRoutine();
+  buildAll();
+}
+
+function addSession() {
+  const name = prompt("Nombre de la nueva sesión:", "Nueva sesión");
+  if (!name) return;
+  const id = newId("s");
+  routine.sessions.push({
+    id, name: name.trim(), tag: "Hipertrofia", tagClass: "hipertrofia", exercises: [],
+  });
+  currentSession = id;
+  saveRoutine();
+  buildAll();
+}
+
+function removeSession(sid) {
+  if (routine.sessions.length <= 1) { alert("Debe quedar al menos una sesión."); return; }
+  const s = getSession(sid);
+  if (!confirm(`¿Eliminar la sesión "${s.name}" y todos sus registros?`)) return;
+  routine.sessions = routine.sessions.filter(x => x.id !== sid);
+  delete state[sid];
+  if (currentSession === sid) currentSession = routine.sessions[0].id;
+  saveRoutine();
+  saveData(true);
+  buildAll();
+}
+
+function resetRoutine() {
+  if (!confirm("¿Restaurar la rutina del PDF original? Se sobrescribirá tu rutina personalizada. Los registros de series se mantienen (los que sigan mapeando a un ejercicio existente).")) return;
+  routine = assignMissingIds(deepClone(DEFAULT_ROUTINE));
+  currentSession = routine.sessions[0].id;
+  saveRoutine();
+  buildAll();
+  flash("Rutina PDF restaurada ✅");
+}
+
+function exportRoutine() {
+  const data = { routine, state, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `rutina-rir-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  flash("Exportado ⬇️");
+}
+
+function importRoutine() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json,.json";
+  input.onchange = () => {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data.routine || !Array.isArray(data.routine.sessions)) {
+          throw new Error("El JSON no contiene routine.sessions.");
+        }
+        routine = assignMissingIds(data.routine);
+        state = data.state || {};
+        currentSession = routine.sessions[0]?.id;
+        saveRoutine();
+        saveData(true);
+        buildAll();
+        flash("Importado ✅");
+      } catch (e) { alert("Error importando: " + e.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function toggleEditMode() {
+  editMode = !editMode;
+  document.body.classList.toggle("edit-mode", editMode);
+  const btn = document.getElementById("edit-toggle");
+  btn.textContent = editMode ? "✅ Terminar edición" : "✏️ Editar rutina";
+  buildAll();
+}
+
+// =========================================================
+// Cálculo (Epley)
+// =========================================================
+function getTargetReps(ex, strategy) {
+  if (strategy === "low") return ex.repsMin;
+  if (strategy === "high") return ex.repsMax;
+  return (ex.repsMin + ex.repsMax) / 2;
+}
+function getTargetRIR(ex) { return (ex.rirMin + ex.rirMax) / 2; }
+
+function computeExercise(sid, exId) {
+  const ex = getExercise(sid, exId);
+  if (!ex || editMode) return;
+
   const inc = parseFloat(document.getElementById("increment").value);
-  const useInc = ex.inc || inc;   // per-exercise increment
+  const useInc = ex.inc || inc;
   const fatiguePct = (parseFloat(document.getElementById("fatigue").value) || 0) / 100;
+  const strategy = document.getElementById("strategy").value;
 
-  const targetReps = Math.round((ex.repsMin + ex.repsMax) / 2);
-  const targetRIR  = Math.round((ex.rirMin + ex.rirMax) / 2);
+  const targetReps = getTargetReps(ex, strategy);
+  const targetRIR = getTargetRIR(ex);
+  const targetRepsLabel = Number.isInteger(targetReps) ? `${targetReps}` : targetReps.toFixed(1);
+  const targetRIRLabel = Number.isInteger(targetRIR) ? `${targetRIR}` : targetRIR.toFixed(1);
 
-  // per-set suggestions and e1RM
-  const setStates = state[sid]?.[exIdx] || {};
-  let allTop = true;   // all completed sets at top of range with target RIR?
-  let anyFilled = false;
+  const setStates = state[sid]?.[exId] || {};
+  let allTop = true, anyFilled = false;
 
   for (let i = 0; i < ex.sets; i++) {
     const cur = setStates[i] || {};
     const w = num(cur.w), r = num(cur.r), rir = num(cur.rir);
-    const sg = document.getElementById(`sg-${sid}-${exIdx}-${i}`);
-    const e1 = document.getElementById(`e1-${sid}-${exIdx}-${i}`);
+    const e1 = document.getElementById(`e1-${sid}-${exId}-${i}`);
+    if (!e1) continue;
 
     if (w !== null && r !== null && rir !== null) {
       anyFilled = true;
@@ -610,68 +842,59 @@ function computeExercise(sid, exIdx) {
       e1.innerHTML = `<span class="hint">e1RM</span>${est.toFixed(1)} kg`;
       e1.classList.remove("empty");
 
-      // suggestion for NEXT set (i+1)
       if (i + 1 < ex.sets) {
-        // fatigue applied per additional set (from set 1 baseline)
-        const fatigueFactor = Math.pow(1 - fatiguePct, i + 1);
-        // aim for target reps at target RIR
-        let raw = weightForTarget(est, targetReps, targetRIR) * fatigueFactor;
-        // don't over-suggest above what was just used unless you clearly had reps in the tank
-        const nextEl = document.getElementById(`sg-${sid}-${exIdx}-${i+1}`);
+        const fatigueFactor = 1 - fatiguePct;
+        const raw = weightForTarget(est, targetReps, targetRIR) * fatigueFactor;
         const rounded = roundTo(raw, useInc);
-        // status indicator
-        let statusClass = "ok";
-        let statusLabel = "OK";
-        if (rir > ex.rirMax) { statusClass = "warn"; statusLabel = "muy suave"; }
+        const delta = rounded - w;
+        const deltaSign = delta > 0 ? "+" : (delta < 0 ? "" : "±");
+        let statusClass = "ok", statusLabel = "OK";
+        if (rir > ex.rirMax) { statusClass = "warn"; statusLabel = "suave"; }
         else if (rir < ex.rirMin) { statusClass = "low"; statusLabel = "duro"; }
         else if (r < ex.repsMin) { statusClass = "low"; statusLabel = "bajo reps"; }
         else if (r > ex.repsMax) { statusClass = "warn"; statusLabel = "sobre reps"; }
-        nextEl.innerHTML = `<span class="hint"><span class="status-dot ${statusClass}"></span>Próxima serie · ${statusLabel}</span>${rounded.toFixed(2)} kg`;
-        nextEl.classList.remove("empty");
+        const nextEl = document.getElementById(`sg-${sid}-${exId}-${i+1}`);
+        if (nextEl) {
+          nextEl.innerHTML = `
+            <span class="hint"><span class="status-dot ${statusClass}"></span>Próxima serie · ${statusLabel}</span>
+            <div class="sg-weight">${rounded.toFixed(2)} kg <span class="sg-delta">${deltaSign}${delta.toFixed(2)}</span></div>
+            <div class="sg-target">objetivo <b>${targetRepsLabel}</b> reps @ RIR <b>${targetRIRLabel}</b></div>
+          `;
+          nextEl.classList.remove("empty");
+        }
       }
-      // did this set meet "top of range at target RIR"?
       const hitTop = (r >= ex.repsMax) && (rir >= ex.rirMin && rir <= ex.rirMax);
       if (!hitTop) allTop = false;
     } else {
-      // clear the "next set" suggestion for this slot if no prior data leads to it
-      if (i === 0) {
-        // nothing before, keep empty
-      }
       e1.innerHTML = `<span class="hint">e1RM</span>—`;
       e1.classList.add("empty");
       allTop = false;
     }
   }
 
-  // next session recommendation (doble progresión)
-  const ns = document.getElementById(`ns-${sid}-${exIdx}`);
-  const pill = document.getElementById(`pill-${sid}-${exIdx}`);
-  const rirLabel = ex.rirMin === ex.rirMax ? `${ex.rirMin}` : `${ex.rirMin}-${ex.rirMax}`;
+  const ns = document.getElementById(`ns-${sid}-${exId}`);
+  const pill = document.getElementById(`pill-${sid}-${exId}`);
+  const rirLabelDisplay = ex.rirMin === ex.rirMax ? `${ex.rirMin}` : `${ex.rirMin}-${ex.rirMax}`;
 
   if (!nextSessionMap[sid]) nextSessionMap[sid] = {};
 
   if (!anyFilled) {
-    ns.className = "next-session";
-    ns.innerHTML = "";
-    pill.className = "next-weight-pill hidden";
-    pill.textContent = "";
-    delete nextSessionMap[sid][exIdx];
+    if (ns) { ns.className = "next-session"; ns.innerHTML = ""; }
+    if (pill) { pill.className = "next-weight-pill hidden"; pill.textContent = ""; }
+    delete nextSessionMap[sid][exId];
   } else {
-    // find last recorded weight
     let lastW = null;
     for (let i = ex.sets - 1; i >= 0; i--) {
       if (setStates[i] && num(setStates[i].w) !== null) { lastW = num(setStates[i].w); break; }
     }
-
-    let mode, weight, targetRepsLabel, reason;
+    let mode, weight, tRepsLabel, reason;
     if (allTop && lastW !== null) {
       mode = "up";
       weight = roundTo(lastW + useInc, useInc);
-      targetRepsLabel = `${ex.repsMin}-${ex.repsMin+1}`;
+      tRepsLabel = `${ex.repsMin}-${ex.repsMin+1}`;
       reason = "Subes peso — completaste el tope del rango en todas las series. Vuelve al rango bajo.";
     } else if (lastW !== null) {
       mode = "hold";
-      // recommended weight from best e1RM to hit the mid of the range
       let bestE1 = 0;
       for (let i = 0; i < ex.sets; i++) {
         const c = setStates[i] || {};
@@ -682,29 +905,31 @@ function computeExercise(sid, exIdx) {
       }
       const rec = bestE1 > 0 ? weightForTarget(bestE1, targetReps, targetRIR) : lastW;
       weight = roundTo(rec, useInc);
-      targetRepsLabel = `${ex.repsMax}`;
+      tRepsLabel = `${ex.repsMax}`;
       reason = `Mantén peso — apunta a ${ex.repsMax} reps en todas las series para progresar al siguiente peso.`;
     }
-
     if (mode) {
       const icon = mode === "up" ? "🔺" : "⏸";
-      ns.className = `next-session ${mode} visible`;
-      ns.innerHTML = `
-        <div class="ns-icon">${icon}</div>
-        <div class="ns-main">
-          <div class="ns-label">Próxima sesión — empieza con</div>
-          <div class="ns-weight">${weight.toFixed(2)} kg</div>
-          <div class="ns-target">${ex.sets} series × <b>${targetRepsLabel}</b> reps @ RIR <b>${rirLabel}</b></div>
-        </div>
-        <div class="ns-reason">${reason}</div>
-      `;
-      pill.className = `next-weight-pill ${mode}`;
-      pill.textContent = `Próx: ${weight.toFixed(2)} kg`;
-      nextSessionMap[sid][exIdx] = { mode, weight, targetRepsLabel, rirLabel, sets: ex.sets };
+      if (ns) {
+        ns.className = `next-session ${mode} visible`;
+        ns.innerHTML = `
+          <div class="ns-icon">${icon}</div>
+          <div class="ns-main">
+            <div class="ns-label">Próxima sesión — empieza con</div>
+            <div class="ns-weight">${weight.toFixed(2)} kg</div>
+            <div class="ns-target">${ex.sets} series × <b>${tRepsLabel}</b> reps @ RIR <b>${rirLabelDisplay}</b></div>
+          </div>
+          <div class="ns-reason">${reason}</div>
+        `;
+      }
+      if (pill) {
+        pill.className = `next-weight-pill ${mode}`;
+        pill.textContent = `Próx: ${weight.toFixed(2)} kg`;
+      }
+      nextSessionMap[sid][exId] = { mode, weight, tRepsLabel, rirLabel: rirLabelDisplay, sets: ex.sets, exName: ex.name };
     }
   }
 
-  // refresh session summary
   renderSummary(sid);
 }
 
@@ -712,18 +937,17 @@ function renderSummary(sid) {
   const listEl = document.getElementById(`summary-list-${sid}`);
   if (!listEl) return;
   const map = nextSessionMap[sid] || {};
-  const entries = ROUTINE[sid].exercises
-    .map((ex, i) => ({ ex, i, rec: map[i] }))
-    .filter(e => e.rec);
-
+  const s = getSession(sid);
+  if (!s) { listEl.innerHTML = ""; return; }
+  const entries = s.exercises.map(ex => ({ ex, rec: map[ex.id] })).filter(e => e.rec);
   if (entries.length === 0) {
     listEl.innerHTML = `<div class="summary-empty">Registra al menos una serie para ver el resumen.</div>`;
     return;
   }
   listEl.innerHTML = entries.map(({ ex, rec }) => `
     <div class="summary-row ${rec.mode}">
-      <div class="sr-name">${ex.name}</div>
-      <div class="sr-target">${rec.sets}×${rec.targetRepsLabel} @ RIR ${rec.rirLabel}</div>
+      <div class="sr-name">${escapeHtml(ex.name)}</div>
+      <div class="sr-target">${rec.sets}×${rec.tRepsLabel} @ RIR ${rec.rirLabel}</div>
       <div class="sr-weight">${rec.weight.toFixed(2)} kg<small>${rec.mode === "up" ? "↑ subir" : "= mantener"}</small></div>
     </div>
   `).join("");
@@ -733,74 +957,250 @@ function renderAll() {
   document.querySelectorAll(".session").forEach(el => {
     el.classList.toggle("active", el.id === "session-" + currentSession);
   });
-  // recompute all exercises so suggestions refresh with current toolbar values
-  Object.keys(ROUTINE).forEach(sid => {
-    ROUTINE[sid].exercises.forEach((_, i) => computeExercise(sid, i));
-  });
+  if (!editMode) {
+    routine.sessions.forEach(s => s.exercises.forEach(ex => computeExercise(s.id, ex.id)));
+  }
 }
 
 // =========================================================
-// Persistence
+// Construcción del DOM
 // =========================================================
-function saveData(silent = false) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      state,
-      increment: document.getElementById("increment").value,
-      fatigue: document.getElementById("fatigue").value,
-      currentSession,
-    }));
-    if (!silent) flash("Guardado ✅");
-  } catch (e) {
-    flash("Error al guardar: " + e.message);
+function buildAll() {
+  buildTabs();
+  buildSessions();
+  fillInputsFromState();
+  renderAll();
+}
+
+function buildTabs() {
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = "";
+  routine.sessions.forEach(s => {
+    const btn = document.createElement("div");
+    btn.className = "tab" + (s.id === currentSession ? " active" : "");
+    btn.textContent = s.name;
+    btn.onclick = () => { currentSession = s.id; buildTabs(); renderAll(); saveData(true); };
+    tabs.appendChild(btn);
+  });
+  if (editMode) {
+    const addBtn = document.createElement("div");
+    addBtn.className = "tab tab-add";
+    addBtn.textContent = "➕ Añadir sesión";
+    addBtn.onclick = addSession;
+    tabs.appendChild(addBtn);
   }
 }
-function loadData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) { flash("No hay datos guardados"); return; }
-    const data = JSON.parse(raw);
-    state = data.state || {};
-    if (data.increment) document.getElementById("increment").value = data.increment;
-    if (data.fatigue) document.getElementById("fatigue").value = data.fatigue;
-    if (data.currentSession) currentSession = data.currentSession;
-    fillInputsFromState();
-    buildTabs();
-    renderAll();
-    flash("Recargado ✅");
-  } catch (e) {
-    flash("Error al cargar: " + e.message);
-  }
+
+function buildSessions() {
+  const container = document.getElementById("sessions");
+  container.innerHTML = "";
+  routine.sessions.forEach(s => {
+    const div = document.createElement("div");
+    div.className = "session" + (s.id === currentSession ? " active" : "");
+    div.id = "session-" + s.id;
+
+    div.appendChild(buildSessionHeader(s));
+    if (!editMode) div.appendChild(buildSummaryCard(s));
+    s.exercises.forEach(ex => div.appendChild(buildExerciseCard(s, ex)));
+    if (editMode) div.appendChild(buildAddExerciseFooter(s));
+
+    container.appendChild(div);
+  });
+
+  document.querySelectorAll('.sets input.data-input').forEach(inp => {
+    inp.addEventListener("input", handleInput);
+  });
 }
+
+function buildSessionHeader(s) {
+  const el = document.createElement("div");
+  el.className = "session-header";
+  if (editMode) {
+    el.innerHTML = `
+      <input class="edit-input edit-name" value="${escapeHtml(s.name)}" data-field="name" style="max-width:300px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="edit-input" data-field="tag" style="min-width:120px">
+          <option value="Fuerza"${s.tag === "Fuerza" ? " selected" : ""}>Fuerza</option>
+          <option value="Hipertrofia"${s.tag === "Hipertrofia" ? " selected" : ""}>Hipertrofia</option>
+        </select>
+        <button class="icon-btn danger" onclick="removeSession('${s.id}')" title="Eliminar sesión">🗑</button>
+      </div>
+    `;
+    el.querySelectorAll('.edit-input').forEach(inp => {
+      inp.addEventListener("change", (e) => {
+        updateSessionField(s.id, e.target.dataset.field, e.target.value);
+      });
+    });
+  } else {
+    el.innerHTML = `
+      <h2>${escapeHtml(s.name)}</h2>
+      <span class="badge ${s.tagClass}">${escapeHtml(s.tag)}</span>
+    `;
+  }
+  return el;
+}
+
+function buildSummaryCard(s) {
+  const el = document.createElement("details");
+  el.className = "summary-card";
+  el.id = "summary-" + s.id;
+  el.innerHTML = `
+    <summary>📋 Resumen próxima sesión</summary>
+    <div class="summary-list" id="summary-list-${s.id}">
+      <div class="summary-empty">Registra al menos una serie para ver el resumen.</div>
+    </div>
+  `;
+  return el;
+}
+
+function buildExerciseCard(s, ex) {
+  const el = document.createElement("div");
+  el.className = "exercise";
+
+  const rirLabel = ex.rirMin === ex.rirMax ? ex.rirMin : `${ex.rirMin}-${ex.rirMax}`;
+  const repsLabel = `${ex.repsMin}-${ex.repsMax}`;
+
+  const header = document.createElement("div");
+  header.className = "ex-header" + (editMode ? " editing" : "");
+  if (editMode) {
+    header.innerHTML = `
+      <div class="ex-name">
+        <input class="edit-input edit-ex-name" value="${escapeHtml(ex.name)}" data-field="name">
+      </div>
+      <div class="ex-meta"><span>Series</span>
+        <input type="number" class="edit-input" data-field="sets" value="${ex.sets}" min="1" step="1">
+      </div>
+      <div class="ex-meta"><span>Reps min-max</span>
+        <div class="field-pair">
+          <input type="number" class="edit-input" data-field="repsMin" value="${ex.repsMin}" min="1" step="1">
+          <input type="number" class="edit-input" data-field="repsMax" value="${ex.repsMax}" min="1" step="1">
+        </div>
+      </div>
+      <div class="ex-meta"><span>RIR min-max</span>
+        <div class="field-pair">
+          <input type="number" class="edit-input" data-field="rirMin" value="${ex.rirMin}" min="0" step="1">
+          <input type="number" class="edit-input" data-field="rirMax" value="${ex.rirMax}" min="0" step="1">
+        </div>
+      </div>
+      <div class="ex-meta"><span>Descanso · Incremento</span>
+        <div class="field-pair">
+          <input type="text" class="edit-input" data-field="rest" value="${escapeHtml(ex.rest)}" placeholder="90 s">
+          <input type="number" class="edit-input" data-field="inc" value="${ex.inc}" min="0.25" step="0.25" style="max-width:60px">
+        </div>
+      </div>
+      <div class="ex-actions">
+        <button class="icon-btn" onclick="moveExercise('${s.id}','${ex.id}',-1)" title="Subir">🔼</button>
+        <button class="icon-btn" onclick="moveExercise('${s.id}','${ex.id}',1)" title="Bajar">🔽</button>
+        <button class="icon-btn danger" onclick="removeExercise('${s.id}','${ex.id}')" title="Eliminar ejercicio">🗑</button>
+      </div>
+    `;
+    header.querySelectorAll('.edit-input').forEach(inp => {
+      inp.addEventListener("change", (e) => {
+        updateExField(s.id, ex.id, e.target.dataset.field, e.target.value);
+      });
+    });
+  } else {
+    header.innerHTML = `
+      <div class="ex-name">${escapeHtml(ex.name)}<span class="next-weight-pill hidden" id="pill-${s.id}-${ex.id}"></span></div>
+      <div class="ex-meta"><span>Series</span><span>${ex.sets}</span></div>
+      <div class="ex-meta"><span>Reps</span><span>${repsLabel}</span></div>
+      <div class="ex-meta"><span>RIR</span><span>${rirLabel}</span></div>
+      <div class="ex-meta"><span>Descanso</span><span>${escapeHtml(ex.rest)}</span></div>
+    `;
+  }
+  el.appendChild(header);
+
+  if (!editMode) {
+    const setsDiv = document.createElement("div");
+    setsDiv.className = "sets";
+    setsDiv.innerHTML = `
+      <div class="head">Serie</div>
+      <div class="head">Peso (kg)</div>
+      <div class="head">Reps</div>
+      <div class="head">RIR</div>
+      <div class="head">Sugerencia siguiente</div>
+      <div class="head">e1RM</div>
+    `;
+    for (let i = 0; i < ex.sets; i++) {
+      setsDiv.innerHTML += `
+        <div class="set-label">#${i+1}</div>
+        <input type="number" class="data-input" step="${ex.inc}" data-s="${s.id}" data-e="${ex.id}" data-i="${i}" data-f="w" placeholder="—">
+        <input type="number" class="data-input" step="1" data-s="${s.id}" data-e="${ex.id}" data-i="${i}" data-f="r" placeholder="—">
+        <input type="number" class="data-input" step="1" data-s="${s.id}" data-e="${ex.id}" data-i="${i}" data-f="rir" placeholder="—">
+        <div class="suggest empty" id="sg-${s.id}-${ex.id}-${i}"><span class="hint">Próxima serie</span>—</div>
+        <div class="suggest empty" id="e1-${s.id}-${ex.id}-${i}"><span class="hint">e1RM</span>—</div>
+      `;
+    }
+    el.appendChild(setsDiv);
+
+    const ns = document.createElement("div");
+    ns.className = "next-session";
+    ns.id = `ns-${s.id}-${ex.id}`;
+    el.appendChild(ns);
+  }
+  return el;
+}
+
+function buildAddExerciseFooter(s) {
+  const el = document.createElement("div");
+  el.className = "add-exercise";
+  el.innerHTML = `<button onclick="addExercise('${s.id}')">➕ Añadir ejercicio</button>`;
+  return el;
+}
+
+function handleInput(e) {
+  const sid = e.target.dataset.s;
+  const exId = e.target.dataset.e;
+  const i = +e.target.dataset.i;
+  const f = e.target.dataset.f;
+  if (!state[sid]) state[sid] = {};
+  if (!state[sid][exId]) state[sid][exId] = {};
+  if (!state[sid][exId][i]) state[sid][exId][i] = {};
+  const val = e.target.value === "" ? null : parseFloat(e.target.value);
+  state[sid][exId][i][f] = val;
+  computeExercise(sid, exId);
+  saveData(true);
+}
+
 function fillInputsFromState() {
-  document.querySelectorAll('.sets input').forEach(inp => {
-    const s = inp.dataset.s, ex = +inp.dataset.e, i = +inp.dataset.i, f = inp.dataset.f;
-    const v = state?.[s]?.[ex]?.[i]?.[f];
+  document.querySelectorAll('.data-input').forEach(inp => {
+    const sid = inp.dataset.s, exId = inp.dataset.e, i = +inp.dataset.i, f = inp.dataset.f;
+    const v = state?.[sid]?.[exId]?.[i]?.[f];
     inp.value = (v === undefined || v === null) ? "" : v;
   });
 }
+
 function resetSession() {
-  if (!confirm(`Vaciar todos los datos de "${ROUTINE[currentSession].name}"?`)) return;
+  const s = getSession(currentSession);
+  if (!s) return;
+  if (!confirm(`Vaciar todos los datos de "${s.name}"?`)) return;
   delete state[currentSession];
-  fillInputsFromState();
-  renderAll();
   saveData(true);
+  buildAll();
   flash("Sesión vaciada");
 }
+
 function flash(msg) {
   const el = document.getElementById("save-status");
   el.textContent = msg;
-  setTimeout(() => { el.textContent = "Los datos se guardan automáticamente"; }, 2000);
+  setTimeout(() => { el.textContent = "Guardado automático"; }, 2000);
 }
 
 // =========================================================
 // Init
 // =========================================================
-buildTabs();
-buildSessions();
+routine = loadRoutine();
+if (!routine.sessions.length) {
+  routine = assignMissingIds(deepClone(DEFAULT_ROUTINE));
+  saveRoutine();
+}
+currentSession = routine.sessions[0]?.id;
+loadData();
+buildAll();
+
 document.getElementById("increment").addEventListener("change", () => { renderAll(); saveData(true); });
 document.getElementById("fatigue").addEventListener("input", () => { renderAll(); saveData(true); });
-loadData();
+document.getElementById("strategy").addEventListener("change", () => { renderAll(); saveData(true); });
 
 // =========================================================
 // Service Worker (PWA)
