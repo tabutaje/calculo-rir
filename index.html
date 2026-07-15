@@ -454,22 +454,12 @@
 <div class="sub">Rutina editable · Doble progresión con estimación de e1RM · PWA offline</div>
 
 <div class="toolbar">
-  <label>Incremento kg:
-    <select id="increment">
-      <option value="1.25">1.25</option>
-      <option value="2.5" selected>2.5</option>
-      <option value="5">5</option>
-    </select>
-  </label>
   <label>Estrategia:
     <select id="strategy" title="Dónde apuntar dentro del rango de reps al calcular el peso">
       <option value="low" selected>Agresiva (rango bajo)</option>
       <option value="mid">Balanceada (medio)</option>
       <option value="high">Conservadora (rango alto)</option>
     </select>
-  </label>
-  <label title="Descuento por serie por acumulación de fatiga. 0% = ignorar fatiga.">Fatiga por serie (%):
-    <input type="number" id="fatigue" value="0" min="0" max="10" step="0.5" style="width:60px">
   </label>
   <button id="edit-toggle" class="secondary" onclick="toggleEditMode()">✏️ Editar rutina</button>
   <button class="secondary" onclick="exportRoutine()" title="Descargar rutina + registros en JSON">⬇️ Exportar</button>
@@ -485,20 +475,20 @@
 <div class="info-box">
   <details open>
     <summary>Cómo funciona</summary>
-    <p><b>Introduce peso, repeticiones y RIR</b> tras cada serie. La celda azul te sugiere el peso de la <b>siguiente serie</b> ajustado a lo que acabas de hacer (no un +2,5 kg fijo).</p>
+    <p><b>Introduce peso, repeticiones y RIR</b> tras cada serie. La celda azul te sugiere el peso de la <b>siguiente serie</b> ajustado a lo que acabas de hacer, sin sumar un delta fijo.</p>
     <p><b>Fórmula:</b> estima tu 1RM con Epley usando reps + RIR como reps hasta el fallo:
       <br><code>e1RM = peso × (1 + (reps + RIR) / 30)</code>
       <br>Y el peso de la próxima serie para caer en el objetivo:
-      <br><code>peso = e1RM / (1 + (reps_objetivo + RIR_objetivo) / 30) × (1 − fatiga%)</code>
-      <br>Se redondea al incremento del ejercicio (2,5 kg compuestos, 1,25 kg aislados, 5 kg pierna pesada).</p>
+      <br><code>peso = e1RM / (1 + (reps_objetivo + RIR_objetivo) / 30)</code>
+      <br>Se redondea al <b>incremento del propio ejercicio</b> (por defecto 2,5 kg en compuestos, 1,25 kg en aislados, 5 kg en sentadilla hack / prensa). Puedes cambiar ese incremento por ejercicio en el modo edición.</p>
     <p><b>Estrategia</b> — qué punto del rango de reps se usa como objetivo:</p>
     <ul style="margin:6px 0 12px 20px;padding:0;color:var(--muted)">
       <li><b>Agresiva (rango bajo)</b> — apunta al mínimo de reps → peso más alto, forzando la progresión. Recomendada.</li>
       <li><b>Balanceada (medio)</b> — apunta al centro del rango.</li>
       <li><b>Conservadora (rango alto)</b> — apunta al máximo de reps → peso más bajo, más margen.</li>
     </ul>
-    <p><b>Ejemplo con Agresiva:</b> plan 6-8 reps @ RIR 2, haces 40 kg × 8 @ RIR 4 → e1RM = 56 kg → objetivo 6 reps @ RIR 2 → 56 / (1+8/30) = 44,2 kg → <b>redondeo a 45 kg</b> (+5 kg). Con la balanceada saldrían 42,5 kg.</p>
-    <p><b>Fatiga por serie:</b> descuento porcentual aplicado a la siguiente serie por acumulación de cansancio. 0 % por defecto (Epley ya es conservador). Ponlo en 1-2 % si en compuestos pesados notas que caes de reps de serie a serie.</p>
+    <p><b>Ejemplo con Agresiva:</b> plan 6-8 reps @ RIR 2, haces 40 kg × 8 @ RIR 4 → e1RM = 56 kg → objetivo 6 reps @ RIR 2 → 56 / (1+8/30) = 44,2 kg → <b>redondeo a 45 kg</b> (+5 kg).</p>
+    <p><b>Fatiga:</b> no se aplica ningún descuento artificial. La cuenta se rehace tras cada serie partiendo del e1RM de la <b>última serie hecha</b>, así que si vas cayendo de reps o RIR, el peso propuesto ya se ajusta solo con tus datos reales.</p>
     <p><b>Doble progresión (tarjeta grande bajo cada ejercicio):</b> cuando <b>todas las series</b> lleguen al extremo alto del rango con el RIR objetivo, la tarjeta verde te dice el nuevo peso para la próxima sesión. Si no llegas, se queda ámbar y mantienes peso.</p>
     <p><b>Editar la rutina:</b> pulsa <b>✏️ Editar rutina</b> para renombrar ejercicios y sesiones, cambiar series/reps/RIR/descanso/incremento, añadir o eliminar ejercicios (➕ y 🗑) y reordenarlos (🔼🔽). Usa <b>➕ Añadir sesión</b> en las pestañas para crear una nueva. Los cambios se guardan al momento.</p>
     <p><b>Exportar / importar:</b> <b>⬇️ Exportar</b> descarga un JSON con tu rutina y todos tus registros (útil como copia de seguridad o para pasar entre móvil y ordenador). <b>⬆️ Importar</b> lo restaura. <b>🔄 Rutina PDF</b> vuelve a la rutina original del documento.</p>
@@ -617,8 +607,6 @@ function saveData(silent = false) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       state,
-      increment: document.getElementById("increment").value,
-      fatigue: document.getElementById("fatigue").value,
       strategy: document.getElementById("strategy").value,
       currentSession,
     }));
@@ -632,8 +620,6 @@ function loadData() {
     if (!raw) return;
     const data = JSON.parse(raw);
     state = migrateState(data.state || {});
-    if (data.increment) document.getElementById("increment").value = data.increment;
-    if (data.fatigue !== undefined) document.getElementById("fatigue").value = data.fatigue;
     if (data.strategy) document.getElementById("strategy").value = data.strategy;
     if (data.currentSession && getSession(data.currentSession)) currentSession = data.currentSession;
   } catch (e) { flash("Error al cargar: " + e.message); }
@@ -817,9 +803,7 @@ function computeExercise(sid, exId) {
   const ex = getExercise(sid, exId);
   if (!ex || editMode) return;
 
-  const inc = parseFloat(document.getElementById("increment").value);
-  const useInc = ex.inc || inc;
-  const fatiguePct = (parseFloat(document.getElementById("fatigue").value) || 0) / 100;
+  const useInc = ex.inc || 2.5;
   const strategy = document.getElementById("strategy").value;
 
   const targetReps = getTargetReps(ex, strategy);
@@ -843,8 +827,7 @@ function computeExercise(sid, exId) {
       e1.classList.remove("empty");
 
       if (i + 1 < ex.sets) {
-        const fatigueFactor = 1 - fatiguePct;
-        const raw = weightForTarget(est, targetReps, targetRIR) * fatigueFactor;
+        const raw = weightForTarget(est, targetReps, targetRIR);
         const rounded = roundTo(raw, useInc);
         const delta = rounded - w;
         const deltaSign = delta > 0 ? "+" : (delta < 0 ? "" : "±");
@@ -1198,8 +1181,6 @@ currentSession = routine.sessions[0]?.id;
 loadData();
 buildAll();
 
-document.getElementById("increment").addEventListener("change", () => { renderAll(); saveData(true); });
-document.getElementById("fatigue").addEventListener("input", () => { renderAll(); saveData(true); });
 document.getElementById("strategy").addEventListener("change", () => { renderAll(); saveData(true); });
 
 // =========================================================
