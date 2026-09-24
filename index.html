@@ -140,8 +140,38 @@
     align-items: center;
     font-size: 14px;
     border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.12s;
   }
-  .ex-name { font-weight: 600; }
+  .ex-header:hover { background: #252a34; }
+  .ex-header.editing { cursor: default; }
+  .ex-header.editing:hover { background: var(--panel-2); }
+  .ex-name { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ex-chevron {
+    color: var(--muted);
+    font-size: 11px;
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+    display: inline-block;
+    width: 10px;
+  }
+  .exercise.open .ex-chevron { transform: rotate(90deg); color: var(--accent); }
+  .ex-progress {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+  }
+  .ex-progress.partial { border-color: rgba(224,168,58,0.5); color: var(--warn); }
+  .ex-progress.done { border-color: var(--accent-2); color: var(--accent-2); background: rgba(58,166,117,0.1); }
+  .ex-body { display: none; }
+  .exercise.open .ex-body { display: block; }
   .ex-meta {
     color: var(--muted);
     font-size: 12px;
@@ -338,6 +368,46 @@
     margin-top: 2px;
   }
   .summary-empty { color: var(--muted); font-size: 13px; padding: 8px 0; text-align: center; }
+
+  /* Aviso de nueva versión */
+  .update-banner {
+    display: none;
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 999;
+    background: var(--accent);
+    color: #fff;
+    padding: 12px 18px;
+    border-radius: 999px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+    font-size: 14px;
+    font-weight: 600;
+    align-items: center;
+    gap: 14px;
+    max-width: calc(100vw - 32px);
+  }
+  .update-banner.show { display: flex; }
+  .update-banner button {
+    background: rgba(255,255,255,0.22);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .update-banner button:hover { background: rgba(255,255,255,0.32); }
+  .app-version {
+    color: var(--muted);
+    font-size: 11px;
+    text-align: center;
+    margin-top: 14px;
+    letter-spacing: 0.3px;
+  }
   .info-box {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -461,6 +531,8 @@
       <option value="high">Conservadora (rango alto)</option>
     </select>
   </label>
+  <button class="secondary" onclick="setAllExpanded(true)" title="Desplegar todos los ejercicios">⤢ Expandir</button>
+  <button class="secondary" onclick="setAllExpanded(false)" title="Plegar todos los ejercicios">⤡ Colapsar</button>
   <button id="edit-toggle" class="secondary" onclick="toggleEditMode()">✏️ Editar rutina</button>
   <button class="secondary" onclick="exportRoutine()" title="Descargar rutina + registros en JSON">⬇️ Exportar</button>
   <button class="secondary" onclick="importRoutine()" title="Cargar rutina desde JSON">⬆️ Importar</button>
@@ -490,10 +562,18 @@
     <p><b>Ejemplo con Agresiva:</b> plan 6-8 reps @ RIR 2, haces 40 kg × 8 @ RIR 4 → e1RM = 56 kg → objetivo 6 reps @ RIR 2 → 56 / (1+8/30) = 44,2 kg → <b>redondeo a 45 kg</b> (+5 kg).</p>
     <p><b>Fatiga:</b> no se aplica ningún descuento artificial. La cuenta se rehace tras cada serie partiendo del e1RM de la <b>última serie hecha</b>, así que si vas cayendo de reps o RIR, el peso propuesto ya se ajusta solo con tus datos reales.</p>
     <p><b>Doble progresión (tarjeta grande bajo cada ejercicio):</b> cuando <b>todas las series</b> lleguen al extremo alto del rango con el RIR objetivo, la tarjeta verde te dice el nuevo peso para la próxima sesión. Si no llegas, se queda ámbar y mantienes peso.</p>
+    <p><b>Plegar ejercicios:</b> pulsa la cabecera de cualquier ejercicio para desplegar o plegar su tabla de series. Plegado sigues viendo el contador de series registradas (<b>2/4</b>) y el peso sugerido para la próxima sesión, así localizas rápido dónde vas. Los botones <b>⤢ Expandir</b> / <b>⤡ Colapsar</b> afectan a todos los de la sesión activa. El estado se recuerda entre visitas.</p>
     <p><b>Editar la rutina:</b> pulsa <b>✏️ Editar rutina</b> para renombrar ejercicios y sesiones, cambiar series/reps/RIR/descanso/incremento, añadir o eliminar ejercicios (➕ y 🗑) y reordenarlos (🔼🔽). Usa <b>➕ Añadir sesión</b> en las pestañas para crear una nueva. Los cambios se guardan al momento.</p>
     <p><b>Exportar / importar:</b> <b>⬇️ Exportar</b> descarga un JSON con tu rutina y todos tus registros (útil como copia de seguridad o para pasar entre móvil y ordenador). <b>⬆️ Importar</b> lo restaura. <b>🔄 Rutina PDF</b> vuelve a la rutina original del documento.</p>
     <p><b>RIR</b> = repeticiones en reserva (las que te quedarían antes del fallo).</p>
   </details>
+</div>
+
+<div class="app-version" id="app-version"></div>
+
+<div class="update-banner" id="update-banner">
+  <span>Nueva versión disponible</span>
+  <button onclick="location.reload()">Actualizar</button>
 </div>
 
 <script>
@@ -561,6 +641,7 @@ let state = {};              // state[sessionId][exerciseId][setIdx] = { w, r, r
 let currentSession = null;
 let nextSessionMap = {};     // nextSessionMap[sid][exId] = { mode, weight, tRepsLabel, rirLabel, sets, exName }
 let editMode = false;
+let openExercises = {};      // openExercises["sid::exId"] = true  (colapsado por defecto)
 
 // =========================================================
 // Utils
@@ -584,6 +665,32 @@ function assignMissingIds(r) {
   return r;
 }
 function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+// ---- plegado de ejercicios ----
+function exKey(sid, exId) { return sid + "::" + exId; }
+function isExpanded(sid, exId) { return !!openExercises[exKey(sid, exId)]; }
+
+function toggleExercise(sid, exId) {
+  const key = exKey(sid, exId);
+  if (openExercises[key]) delete openExercises[key];
+  else openExercises[key] = true;
+  const card = document.getElementById(`ex-${sid}-${exId}`);
+  if (card) card.classList.toggle("open", isExpanded(sid, exId));
+  saveData(true);
+}
+
+function setAllExpanded(expand) {
+  const s = getSession(currentSession);
+  if (!s) return;
+  s.exercises.forEach(ex => {
+    const key = exKey(s.id, ex.id);
+    if (expand) openExercises[key] = true;
+    else delete openExercises[key];
+    const card = document.getElementById(`ex-${s.id}-${ex.id}`);
+    if (card) card.classList.toggle("open", expand);
+  });
+  saveData(true);
+}
 
 // =========================================================
 // Persistencia
@@ -609,6 +716,7 @@ function saveData(silent = false) {
       state,
       strategy: document.getElementById("strategy").value,
       currentSession,
+      openExercises,
     }));
     if (!silent) flash("Guardado ✅");
   } catch (e) { flash("Error al guardar: " + e.message); }
@@ -620,6 +728,7 @@ function loadData() {
     if (!raw) return;
     const data = JSON.parse(raw);
     state = migrateState(data.state || {});
+    openExercises = data.openExercises || {};
     if (data.strategy) document.getElementById("strategy").value = data.strategy;
     if (data.currentSession && getSession(data.currentSession)) currentSession = data.currentSession;
   } catch (e) { flash("Error al cargar: " + e.message); }
@@ -812,7 +921,7 @@ function computeExercise(sid, exId) {
   const targetRIRLabel = Number.isInteger(targetRIR) ? `${targetRIR}` : targetRIR.toFixed(1);
 
   const setStates = state[sid]?.[exId] || {};
-  let allTop = true, anyFilled = false;
+  let allTop = true, anyFilled = false, filledCount = 0;
 
   for (let i = 0; i < ex.sets; i++) {
     const cur = setStates[i] || {};
@@ -822,6 +931,7 @@ function computeExercise(sid, exId) {
 
     if (w !== null && r !== null && rir !== null) {
       anyFilled = true;
+      filledCount++;
       const est = e1rm(w, r, rir);
       e1.innerHTML = `<span class="hint">e1RM</span>${est.toFixed(1)} kg`;
       e1.classList.remove("empty");
@@ -853,6 +963,14 @@ function computeExercise(sid, exId) {
       e1.classList.add("empty");
       allTop = false;
     }
+  }
+
+  // contador de series registradas en la cabecera plegada
+  const prog = document.getElementById(`prog-${sid}-${exId}`);
+  if (prog) {
+    prog.textContent = `${filledCount}/${ex.sets}`;
+    prog.className = "ex-progress" +
+      (filledCount === 0 ? "" : filledCount >= ex.sets ? " done" : " partial");
   }
 
   const ns = document.getElementById(`ns-${sid}-${exId}`);
@@ -1038,7 +1156,8 @@ function buildSummaryCard(s) {
 
 function buildExerciseCard(s, ex) {
   const el = document.createElement("div");
-  el.className = "exercise";
+  el.className = "exercise" + (!editMode && isExpanded(s.id, ex.id) ? " open" : "");
+  el.id = `ex-${s.id}-${ex.id}`;
 
   const rirLabel = ex.rirMin === ex.rirMax ? ex.rirMin : `${ex.rirMin}-${ex.rirMax}`;
   const repsLabel = `${ex.repsMin}-${ex.repsMax}`;
@@ -1084,16 +1203,25 @@ function buildExerciseCard(s, ex) {
     });
   } else {
     header.innerHTML = `
-      <div class="ex-name">${escapeHtml(ex.name)}<span class="next-weight-pill hidden" id="pill-${s.id}-${ex.id}"></span></div>
+      <div class="ex-name">
+        <span class="ex-chevron">▶</span>
+        <span>${escapeHtml(ex.name)}</span>
+        <span class="ex-progress" id="prog-${s.id}-${ex.id}">0/${ex.sets}</span>
+        <span class="next-weight-pill hidden" id="pill-${s.id}-${ex.id}"></span>
+      </div>
       <div class="ex-meta"><span>Series</span><span>${ex.sets}</span></div>
       <div class="ex-meta"><span>Reps</span><span>${repsLabel}</span></div>
       <div class="ex-meta"><span>RIR</span><span>${rirLabel}</span></div>
       <div class="ex-meta"><span>Descanso</span><span>${escapeHtml(ex.rest)}</span></div>
     `;
+    header.addEventListener("click", () => toggleExercise(s.id, ex.id));
   }
   el.appendChild(header);
 
   if (!editMode) {
+    const body = document.createElement("div");
+    body.className = "ex-body";
+
     const setsDiv = document.createElement("div");
     setsDiv.className = "sets";
     setsDiv.innerHTML = `
@@ -1114,12 +1242,14 @@ function buildExerciseCard(s, ex) {
         <div class="suggest empty" id="e1-${s.id}-${ex.id}-${i}"><span class="hint">e1RM</span>—</div>
       `;
     }
-    el.appendChild(setsDiv);
+    body.appendChild(setsDiv);
 
     const ns = document.createElement("div");
     ns.className = "next-session";
     ns.id = `ns-${s.id}-${ex.id}`;
-    el.appendChild(ns);
+    body.appendChild(ns);
+
+    el.appendChild(body);
   }
   return el;
 }
@@ -1184,11 +1314,34 @@ buildAll();
 document.getElementById("strategy").addEventListener("change", () => { renderAll(); saveData(true); });
 
 // =========================================================
-// Service Worker (PWA)
+// Service Worker (PWA) + aviso de actualización
 // =========================================================
+const APP_VERSION = "v8";
+document.getElementById("app-version").textContent =
+  `Calculadora RIR ${APP_VERSION} · actualiza sola al abrir con conexión`;
+
+function showUpdateBanner() {
+  document.getElementById("update-banner").classList.add("show");
+}
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch((err) => {
+    navigator.serviceWorker.register("sw.js").then((reg) => {
+      // Nueva versión detectada mientras la app está abierta
+      reg.addEventListener("updatefound", () => {
+        const sw = reg.installing;
+        if (!sw) return;
+        sw.addEventListener("statechange", () => {
+          if (sw.state === "installed" && navigator.serviceWorker.controller) {
+            showUpdateBanner();
+          }
+        });
+      });
+      // Comprueba actualizaciones cada vez que vuelves a la app
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") reg.update().catch(() => {});
+      });
+    }).catch((err) => {
       console.warn("SW registro fallido:", err);
     });
   });
