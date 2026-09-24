@@ -1,0 +1,7 @@
+# Basura del sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Copias de seguridad exportadas desde la app
+rutina-rir-*.json
